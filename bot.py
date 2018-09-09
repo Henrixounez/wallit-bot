@@ -2,18 +2,30 @@ import asyncio
 import discord
 import os
 from discord.ext import commands
-from discord import opus
 
-bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='Stupid bot')
+
+from discord import opus
 
 OPUS_LIBS = ['libopus-0.x86.dll', 'libopus-0.x64.dll', 'libopus-0.dll', 'libopus.so.0', 'libopus.0.dylib']
 
-if not opus.is_loaded():
-	for opus_lib in OPUS_LIBS:
-		try:
-			opus.load_opus(opus_lib)
-		except OSError:
-			pass
+
+def load_opus_lib(opus_libs=OPUS_LIBS):
+    if opus.is_loaded():
+        return True
+
+    for opus_lib in opus_libs:
+        try:
+            opus.load_opus(opus_lib)
+            return
+        except OSError:
+            pass
+
+    raise RuntimeError('Could not load an opus lib. Tried %s' % (', '.join(opus_libs)))
+
+
+bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='Stupid bot')
+
+load_opus_lib()
 
 #Inits bots
 @bot.event
