@@ -1,1 +1,6 @@
 git+https://github.com/Rapptz/discord.py#egg=discord.py[voice]
+asyncio
+pip
+youtube_dl
+websockets
+
