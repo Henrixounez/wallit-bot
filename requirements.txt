@@ -5,4 +5,4 @@ pip
 youtube_dl
 websockets
 opuslib
-PyNaC1
+PyNaCl
