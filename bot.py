@@ -4,6 +4,8 @@ import os
 from discord.ext import commands
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='Stupid bot')
+if not discord.opus.is_loaded():
+	discord.opus.load_opus()
 # bot = commands.Bot(command_prefix=commands.when_mentioned_or('!'), description='Stupid bot')
 
 #Inits bots
