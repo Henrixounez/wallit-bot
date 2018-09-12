@@ -1,5 +1,7 @@
 import asyncio
 import discord
+import random
+import wikipediaapi
 import os
 from discord.ext import commands
 from discord import opus
@@ -46,6 +48,35 @@ async def cat():
 async def ping():
 	await bot.say('Pong! :smiley:')
 
+@bot.command(pass_context=True)
+async def wiki(ctx, page: str):
+	wiki_wiki = wikipediaapi.Wikipedia('en')
+	page_py = wiki_wiki.page(page)
+	if page_py.exists() is False:
+		await bot.send_message(ctx.message.channel, 'Page doesn\'t exists')
+		return
+	await bot.send_message(ctx.message.channel, '**' + page_py.title + '**')
+	size = len(page_py.summary)
+	i = 0
+	while i < size:
+		await bot.send_message(ctx.message.channel, '```' + page_py.summary[i:i + 2000] + '```')
+		i = i + 2000
+
+@bot.command(pass_context=True)
+async def dice(ctx, arg):
+	try:
+		limit = int(arg)
+	except:
+		await bot.send_message(ctx.message.channel, 'Please give a number : !dice 10')
+		return
+	number = random.randint(1, limit)
+	await bot.say(number)
+
+@bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.MissingRequiredArgument):
+		await ctx.send(content="You are missing and argument")
+
 
 class VoiceEntry:
 	def __init__(self, message, player):
@@ -79,6 +110,10 @@ class VoiceState:
 	@property
 	def player(self):
 		return self.current.player
+
+	def skip(self):
+		if self.is_playing():
+			self.player.stop()
 
 	def toggle_next(self):
 		self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
@@ -125,13 +160,17 @@ class Music:
 	@commands.command(pass_context=True)
 	async def play(self, ctx, *, song: str):
 		state = self.get_voice_state(ctx.message.server)
+		opts = {
+			'default_search': 'auto',
+			'quiet': True,
+		}
 		if state.voice is None:
 			success = await ctx.invoke(self.summon)
 			if not success:
 				return
 		try:
-			player = await state.voice.create_ytdl_player(song, after=state.toggle_next)
-		except Exception as e:
+			player = await state.voice.create_ytdl_player(song, ytdl_options=opts, after=state.toggle_next)
+		except:
 			await self.bot.send_message(ctx.message.channel, 'Sorry, can\'t do that')
 		else:
 			player.volume = 0.6
@@ -139,6 +178,42 @@ class Music:
 			await self.bot.say('Enqueued : ' + str(entry))
 			await state.songs.put(entry)
 
+	@commands.command(pass_context=True)
+	async def pause(self, ctx):
+		state = self.get_voice_state(ctx.message.server)
+		if state.is_playing():
+			player = state.player
+			player.pause()
+
+	@commands.command(pass_context=True)
+	async def resume(self, ctx):
+		state = self.get_voice_state(ctx.message.server)
+		if state.voice:
+			player = state.player
+			player.resume()
+
+	@commands.command(pass_context=True)
+	async def stop(self, ctx):
+		server = ctx.message.server
+		state = self.get_voice_state(server)
+		if state.is_playing():
+			player = state.player
+			player.stop()
+		try:
+			state.audio_player.cancel()
+			del self.voice_states[server.id]
+			await state.voice.disconnect()
+		except:
+			pass
+
+	@commands.command(pass_context=True)
+	async def skip(self, ctx):
+		state = self.get_voice_state(ctx.message.server)
+		if not state.is_playing():
+			await self.bot.say('Not playing any music right now.')
+			return
+		await self.bot.say('Skipping current music...')
+		state.skip()
 
 bot.add_cog(Music(bot))
 bot.run(os.environ['DISCORD_TOKEN'])

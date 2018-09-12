@@ -6,3 +6,5 @@ youtube_dl
 websockets
 opuslib
 PyNaCl
+wikipedia-api
+
